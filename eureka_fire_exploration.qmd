@@ -13,13 +13,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Setup 
 ```{r libraries,  results='hide', message=FALSE, warning=FALSE}
 # Load required libraries
-library(tidyverse)       # data wrangling & plotting
-library(sf)              # vector geospatial
-library(raster)          # raster handling
-library(exactextractr)   # fast zonal stats
-library(leaflet)         # interactive maps
-library(htmlwidgets)     # saving interactive maps
-library(viridis)         # colour palettes
+library(tidyverse)        
+library(sf)            
+library(raster)          
+library(exactextractr)    
+library(leaflet)         
+library(htmlwidgets)     
+library(viridis)        
 library(readr)
 library(scales)
 library(ggridges)
@@ -32,18 +32,11 @@ library(RColorBrewer)
 ```{r read_data, results='hide', message=FALSE, warning=FALSE, class.source = 'fold-show'}
 
 # Read vegetation (vector) 
-veg_data <- st_read(
-  dsn   = "/Volumes/Data/GitRepos/eureka_fire_eda/jotrgeodata.gpkg",
-  layer = "JOTR_VegPolys",
-  quiet = TRUE   
-)
+veg_data <- st_read(dsn = "jotrgeodata.gpkg",layer = "JOTR_VegPolys", 
+                    quiet = TRUE)
 
 # Read fire severity (raster)
-rbr_rast <- raster("/Volumes/Data/GitRepos/eureka_fire_eda/refined_rbr.tif")    
-
-#Check coordinate systems 
-# crs(veg_data) # NAD83/ UTM zone 11N
-# crs(rbr_rast) # WGS 84
+rbr_rast <- raster("refined_rbr.tif")    
 ```
 
 
@@ -51,31 +44,18 @@ rbr_rast <- raster("/Volumes/Data/GitRepos/eureka_fire_eda/refined_rbr.tif")
 
 ```{r interactive_map, message=FALSE, warning=FALSE}
 # Build two palette functions (to force descending order in leaflet legend) :
-pal      <- colorNumeric("plasma", domain = values(rbr_rast), na.color = "transparent")
-pal_rev  <- colorNumeric("plasma", domain = values(rbr_rast), na.color = "transparent", reverse = TRUE)
+pal      <- colorNumeric("plasma", domain = values(rbr_rast), 
+                         na.color = "transparent")
+pal_rev  <- colorNumeric("plasma", domain = values(rbr_rast), 
+                         na.color = "transparent", reverse = TRUE)
 
 # Draw the map
 leaflet(options = leafletOptions(attributionControl = TRUE)) %>%
-  addProviderTiles("CartoDB.Positron") %>%
-  
-  # Use the reversed palette for the raster itself
-  addRasterImage(
-    rbr_rast,
-    colors  = pal_rev,
-    opacity = 0.6,
-    project = FALSE
-  ) %>%
-  
-  # Use the normal palette + label transform for the legend
-  addLegend(
-    position  = "bottomright",
-    pal       = pal,
-    values    = values(rbr_rast),
-    title     = "RBR value",
-    labFormat = labelFormat(
-      transform = function(x) sort(x, decreasing = TRUE)
-    )
-  )
+  addProviderTiles("CartoDB.Positron") %>% # Use the reversed palette for the raster itself
+  addRasterImage(rbr_rast, colors = pal_rev, opacity = 0.6,project = FALSE) %>% # Use the normal palette + label transform for the legend
+  addLegend(position= "bottomright", pal = pal, values = values(rbr_rast), 
+            title = "RBR value",
+            labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE)))
 ```
 
 
@@ -90,30 +70,18 @@ colnames(rbr_df) <- c("x", "y", "RBR")
 
 ggplot(rbr_df, aes(x = x, y = y, fill = RBR)) +
   geom_raster() +
-  scale_fill_viridis_c(
-    option    = "plasma",
-    direction = -1,            # so high values are darker purple
-    na.value  = "transparent",
-    name      = "RBR value",
-    limits    = c(-0.2, 0.5), 
-    breaks    = seq(-0.2, 0.5, by = 0.1)
-  ) +
+  scale_fill_viridis_c(option = "plasma", direction = -1,  na.value  = "transparent",
+    name = "RBR value", limits  = c(-0.2, 0.5), breaks = seq(-0.2, 0.5, by = 0.1)) +
   coord_equal() +
-  labs(
-    title = "Refined Relative Burn Ratio (RBR)",
-    x     = NULL,
-    y     = NULL
-  ) +
+  labs(title = "Refined Relative Burn Ratio (RBR)", x = NULL, y = NULL) +
   theme_minimal(base_size = 12) +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.border     = element_rect(fill = NA, color = "black", size = 0.5),
-    axis.ticks       = element_line(color = "black"),
-    axis.text        = element_text(color = "black"),
-    panel.background = element_blank(),
-    legend.position  = "right"
-  )
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(fill = NA, color = "black", size = 0.5),
+        axis.ticks = element_line(color = "black"),
+        axis.text = element_text(color = "black"),
+        panel.background = element_blank(),
+        legend.position = "right")
 
 ```
 
@@ -128,13 +96,7 @@ vec_crs <- st_crs(veg_data)$proj4string
 
 # Reproject the raster to that CRS
 #    - use method="bilinear" for continuous data
-rbr_to_vec_crs <- projectRaster(
-  rbr_rast,
-  crs    = vec_crs,
-  method = "bilinear"      
-)
-
-# crs(rbr_to_vec_crs) # NAD83/ UTM zone 11N
+rbr_to_vec_crs <- projectRaster(rbr_rast, crs = vec_crs, method = "bilinear")
 ```
 
 
@@ -142,28 +104,11 @@ rbr_to_vec_crs <- projectRaster(
 
 ```{r fire_perimeter, message=FALSE, warning=FALSE, class.source = 'fold-show'}
 
-# Polygonize all non‐zero, non‐NA cells from the reprojected raster
-polys <- rasterToPolygons(
-  rbr_to_vec_crs, 
-  fun      = function(x) !is.na(x) & x != 0, 
-  dissolve = TRUE
-)
-
-# Convert to sf
-fire_polygons <- st_as_sf(polys)
-
-#  merge into a single boundary polygon
-fire_boundary <- st_union(fire_polygons) %>% 
-  st_sf(geometry = ., crs = st_crs(fire_polygons))
-
-# Write out your new boundary
-# st_write(
-#   fire_boundary,
-#   "generated_fire_boundary_Eureka.gpkg",
-#   layer        = "fire_boundary",
-#   driver       = "GPKG",
-#   delete_layer = TRUE
-# )
+# Polygonize all non‐zero, non‐NA cells from the reprojected raster, convert to sf und merge into a single boundary polygon
+fire_boundary <- rasterToPolygons(rbr_to_vec_crs, fun = function(x) !is.na(x) & x > 0, 
+                          dissolve = TRUE) %>%
+  st_as_sf() %>%
+  st_union() 
 ```
 
 
@@ -173,11 +118,6 @@ fire_boundary <- st_union(fire_polygons) %>%
 
 # Clip vegetation to that boundary
 clipped_veg <- st_intersection(veg_data, fire_boundary)
-
-# Inspect
-#st_crs(clipped_veg)
-#names(clipped_veg)
-
 ```
 
 
@@ -186,45 +126,31 @@ clipped_veg <- st_intersection(veg_data, fire_boundary)
 ```{r veg_summary, message=FALSE, warning=FALSE}
 # Calculate area per vegetation type polygon
 clipped_veg <- clipped_veg %>%
-  mutate(
-    area_ha = as.numeric(st_area(.) / 10000)  # m² → ha
-  )
+  mutate(area_ha = as.numeric(st_area(.) / 10000))  # m² → ha
 
 # Summarize hectares by vegetation type
 veg_summary <- clipped_veg %>%
   st_set_geometry(NULL) %>%          # drop geometry for speed
   group_by(MapUnit_Name) %>%
-  summarise(
-    veg_ha = sum(area_ha, na.rm = TRUE),
-    .groups = "drop"
-  )
+  summarise(veg_ha = sum(area_ha, na.rm = TRUE), .groups = "drop")
 
 #Calculate percent of total
 total_ha <- sum(veg_summary$veg_ha)
 
 veg_summary <- veg_summary %>%
-  mutate(
-    pct_of_total = 100 * veg_ha / total_ha
-  )
+  mutate(pct_of_total = 100 * veg_ha / total_ha)
 
 # Add “Total Burned Area” row
-veg_summary <- bind_rows(
-  veg_summary,
-  tibble(
-    MapUnit_Name = "Total Burned Area",
-    veg_ha       = total_ha,
-    pct_of_total = 100
-  )
-) %>%
+veg_summary <- bind_rows(veg_summary,
+                         tibble(MapUnit_Name = "Total Burned Area", 
+                                veg_ha = total_ha, pct_of_total = 100)) %>%
   arrange(desc(pct_of_total))
 
 # write out
 # write_csv(veg_summary, "veg_burned_summary.csv")
 
 # show table
-knitr::kable(
-  veg_summary
-)
+knitr::kable(veg_summary)
 ```
 
 
@@ -234,10 +160,8 @@ knitr::kable(
 
 # Join summary back to clipped polygons
 clipped_joined <- clipped_veg %>%
-    dplyr::left_join(
-      dplyr::select(veg_summary, MapUnit_Name, veg_ha, pct_of_total),
-    by = "MapUnit_Name"
-  )
+    dplyr::left_join(dplyr::select(veg_summary, MapUnit_Name, veg_ha, pct_of_total),
+    by = "MapUnit_Name")
 
 # Create an ordered factor of vegetation types
 ordered_types <- veg_summary %>%
@@ -253,18 +177,13 @@ names(set3_cols) <- ordered_types
 # Build legend labels without the word “Association”
 legend_labels <- veg_summary %>%
   filter(MapUnit_Name != "Total Burned Area") %>%
-  mutate(
-    # remove “Association” and clean up whitespace
-    clean_name = MapUnit_Name %>%
-      str_remove_all("Association") %>%
-      str_squish(),
-    label = sprintf(
-      "%s\n%.1f ha (%.1f%%)",
-      clean_name,
-      veg_ha,
-      pct_of_total
-    )
-  ) %>%
+  mutate(clean_name = MapUnit_Name %>% # remove “Association” and clean up whitespace
+           str_remove_all("Association") %>%
+           str_squish(),
+         label = sprintf("%s\n%.1f ha (%.1f%%)",
+                         clean_name,
+                         veg_ha,
+                         pct_of_total)) %>%
   pull(label) %>%
   set_names(ordered_types)  # keep the same factor levels for mapping
 
@@ -280,44 +199,28 @@ legend_labels_wrapped <- legend_labels %>%
 
 #plot
 ggplot(clipped_joined) +
-  geom_sf(
-    aes(fill = factor(MapUnit_Name, levels = ordered_types)),
-    color = "gray80", size = 0.2
-  ) +
-  scale_fill_manual(
-    values = set3_cols,
-    labels = legend_labels_wrapped,
-    name   = "Vegetation Type:\nArea (ha) & % of Total"
-  ) +
+  geom_sf(aes(fill = factor(MapUnit_Name, levels = ordered_types)),
+          color = "gray80", size = 0.2) +
+  geom_sf(data = burnt_polygons, fill = NA, color = "black", size = 0.5) +
+  scale_fill_manual(values = set3_cols, labels = legend_labels_wrapped, 
+                    name   = "Vegetation Type:\nArea (ha) & % of Total") +
   coord_sf(crs = st_crs(4326)) +   # keep geographic graticule if you like
-  labs(
-    title   = "",
-    caption = sprintf("Total Burned Area: %.1f ha", total_fire_ha)
-  ) +
+  labs(title   = "", caption = sprintf("Total Burned Area: %.1f ha", total_fire_ha)) +
   theme_minimal(base_size = 10) +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.border     = element_rect(fill = NA, color = "black", size = 0.5),
-    panel.background = element_blank(),
-    axis.text.x      = element_text(angle = 45, hjust = 1),  # ← slanted labels
-    axis.text.y      = element_text(size = 8),
-    axis.ticks       = element_line(color = "black"),
-    axis.title       = element_blank(),
-    legend.position  = "right",
-    legend.text      = element_text(size = 9),
-    legend.title     = element_text(size = 10, face = "bold"),
-    legend.key.height   = unit(1, "cm"),     # ↑ match the guide keyheight
-    legend.spacing.y    = unit(1, "cm"), 
-    plot.caption = element_text(
-      hjust  = 2.5,
-      size   = 10,
-      face   = "bold",
-      margin = margin(b = 2)
-    )
-  )
-
-  
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(fill = NA, color = "black", size = 0.5),
+        panel.background = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),  # ← slanted labels
+        axis.text.y = element_text(size = 8),
+        axis.ticks = element_line(color = "black"),
+        axis.title = element_blank(),
+        legend.position = "right",
+        legend.text = element_text(size = 9),
+        legend.title = element_text(size = 10, face = "bold"),
+        legend.key.height = unit(1, "cm"),     # ↑ match the guide keyheight
+        legend.spacing.y = unit(1, "cm"), 
+        plot.caption = element_text(hjust  = 2.5, margin = margin(b = 2)))
 ```
 
 
@@ -327,39 +230,33 @@ ggplot(clipped_joined) +
 
  # Compute per-polygon stats
 clipped_stats <- clipped_veg %>%
-  mutate(
-    min_RBR    = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
-    max_RBR    = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
-    mean_RBR   = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
-    median_RBR = exact_extract(rbr_to_vec_crs, ., "median",progress = FALSE),
-    sd_RBR     = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE),
-    n_pixels   = exact_extract(rbr_to_vec_crs, ., "count",progress = FALSE)
-  )
+  mutate(min_RBR = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
+         max_RBR = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
+         mean_RBR = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
+         median_RBR = exact_extract(rbr_to_vec_crs, ., "median",progress = FALSE),
+         sd_RBR = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE),
+         n_pixels = exact_extract(rbr_to_vec_crs, ., "count",progress = FALSE))
 
 # Aggregate to one row per vegetation type
 severity_summary <- clipped_stats %>%
-  st_set_geometry(NULL) %>%       # drop geometry for speed
+  st_set_geometry(NULL) %>% # drop geometry for speed
   group_by(MapUnit_Name) %>%
-  summarise(
-    n_pixels   = sum(n_pixels,     na.rm = TRUE,progress = FALSE),
-    min_RBR    = min(min_RBR,      na.rm = TRUE,progress = FALSE),
-    max_RBR    = max(max_RBR,      na.rm = TRUE,progress = FALSE),
-    mean_RBR   = mean(mean_RBR,    na.rm = TRUE,progress = FALSE),
-    median_RBR = mean(median_RBR,  na.rm = TRUE,progress = FALSE),  # mean of medians
-    sd_RBR     = mean(sd_RBR,      na.rm = TRUE,progress = FALSE),  # mean of SDs
-    .groups    = "drop"
-  )
+  summarise(n_pixels = sum(n_pixels, na.rm = TRUE,progress = FALSE),
+            min_RBR = min(min_RBR, na.rm = TRUE,progress = FALSE),
+            max_RBR = max(max_RBR, na.rm = TRUE,progress = FALSE),
+            mean_RBR  = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
+            median_RBR = mean(median_RBR, na.rm = TRUE,progress = FALSE),  # mean of medians
+            sd_RBR = mean(sd_RBR, na.rm = TRUE,progress = FALSE),  # mean of SDs
+            .groups    = "drop")
 
 #  Reorder to your preferred sequence
-ordered_veg <- c(
-  "Singleleaf Pinyon / Muller Oak Woodland Association",
-  "Joshua Tree - California Juniper / Nevada Ephedra Woodland Association",
-  "Muller Oak - California Buckwheat - Narrowleaf Goldenbush Shrubland Association",
-  "California Juniper / Blackbush Woodland Association",
-  "Red Brome - Mediterranean Grass Semi-Natural Herbaceous Stands",
-  "Mojave Yucca - Blackbush Shrubland Association",
-  "Joshua Tree / Blackbush Woodland Association"
-)
+ordered_veg <- c("Singleleaf Pinyon / Muller Oak Woodland Association",
+                 "Joshua Tree - California Juniper / Nevada Ephedra Woodland Association",
+                 "Muller Oak - California Buckwheat - Narrowleaf Goldenbush Shrubland Association",
+                 "California Juniper / Blackbush Woodland Association",
+                 "Red Brome - Mediterranean Grass Semi-Natural Herbaceous Stands",
+                 "Mojave Yucca - Blackbush Shrubland Association",
+                 "Joshua Tree / Blackbush Woodland Association")
 
 severity_summary <- severity_summary %>%
   slice(match(ordered_veg, MapUnit_Name))
@@ -377,13 +274,9 @@ knitr::kable(
 vals_list <- extract(rbr_to_vec_crs, clipped_veg)
 
 # Build long tibble
-vals_df <- tibble(
-  MapUnit_Name = clipped_veg$MapUnit_Name,
-  value        = vals_list
-) %>%
+vals_df <- tibble(MapUnit_Name = clipped_veg$MapUnit_Name, value = vals_list) %>%
   unnest(cols = c(value)) %>%
   filter(!is.na(value))
-
 
 vals_df <- vals_df %>%
   mutate(MapUnit_Name = factor(MapUnit_Name, levels = ordered_veg))
@@ -399,19 +292,15 @@ ggplot(vals_df, aes(x = MapUnit_Name, y = value, fill = MapUnit_Name)) +
   stat_summary(fun = median, geom = "point", size = 1.5, color = "black") +
   scale_fill_manual(values = set3_cols, guide = FALSE) +
   scale_x_discrete(labels = labels_wrapped) +
-  labs(
-    x     = NULL,
-    y     = "Refined Relative Burn Ratio (RBR)",
-    title = "Fire Severity Distribution by Vegetation Type\n(ordered left → right by % burned area)"
-  ) +
+  labs(x = NULL,
+       y = "Refined Relative Burn Ratio (RBR)",
+       title = "Fire Severity Distribution by Vegetation Type\n(ordered left → right by % burned area)") +
   theme_minimal(base_size = 12) +
-  theme(
-    axis.text.x        = element_text(angle = 45, hjust = 1, size = 10),
-    panel.grid.major.y = element_line(color = "grey80", linetype = "dashed"),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor   = element_blank(),
-    plot.title         = element_text(hjust = 0.5, size = 14)
-  )
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        panel.grid.major.y = element_line(color = "grey80", linetype = "dashed"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5, size = 14))
   
 ```
 
@@ -420,13 +309,10 @@ ggplot(vals_df, aes(x = MapUnit_Name, y = value, fill = MapUnit_Name)) +
 
 ```{r read_hist_fire_data, results = "hide", message=FALSE, warning=FALSE,class.source = 'fold-show'}
 # Read the historic‐fires shapefile
-fire_hist <- st_read("/Volumes/Data/GitRepos/eureka_fire_eda/HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp")
+fire_hist <- st_read("HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp")
 
 # Reproject into EPSG:26911 (NAD83 / UTM zone 11N)
 fire_hist <- st_transform(fire_hist, 26911)
-
-# Check the result
-# st_crs(fire_hist)
 
 ```
 
@@ -437,14 +323,13 @@ fire_hist <- st_transform(fire_hist, 26911)
 
 #  palette for all years —
 fire_years <- sort(unique(fire_hist$YEAR_))
-pal_fire        <- setNames(viridis(n = length(fire_years), option = "turbo"),
-                       fire_years)
+pal_fire <- setNames(viridis(n = length(fire_years), option = "turbo"), fire_years)
 
 # create a 100% buffer around the Eureka fire polygon
 #    (buffer distance = max(width, height) of its bbox)
 fb <- fire_boundary %>%
-  st_union() %>%                            # ensure single geometry
-  { 
+  st_union() %>% # ensure single geometry
+  {
     bb  <- st_bbox(.)
     dist <- max(bb$xmax - bb$xmin, bb$ymax - bb$ymin)
     st_buffer(., dist) 
@@ -459,30 +344,19 @@ visible_yr <- fire_hist %>%
 
 # plot
 ggplot() +
-  geom_sf(data = fire_hist,
-          aes(fill = factor(YEAR_)),
-          colour = "black", size = 0.2, alpha = 0.6) +
-  geom_sf(data = fire_boundary,
-          fill   = NA, colour = "red", size = 1) +
-  
-  # zoom to the buffered polygon’s bbox
-  coord_sf(xlim = st_bbox(fb)[c("xmin", "xmax")],
-           ylim = st_bbox(fb)[c("ymin", "ymax")],
+  geom_sf(data = fire_hist, aes(fill = factor(YEAR_)), colour = "black", 
+          size = 0.2, alpha = 0.6) +
+  geom_sf(data = fire_boundary, fill   = NA, colour = "red", size = 1) +
+  coord_sf(xlim = st_bbox(fb)[c("xmin", "xmax")], ylim = st_bbox(fb)[c("ymin", "ymax")],
            expand = FALSE) +
-  scale_fill_manual(
-    name   = "Fire Year",
-    values = pal_fire,
-    breaks = visible_yr
-  ) +
+  scale_fill_manual(name   = "Fire Year", values = pal_fire, breaks = visible_yr) +
   labs(title = "Historical Fires & Eureka Fire Boundary") +
   theme_void(base_size = 14) +
-  theme(
-    legend.position      = c(0.85, 0.85),
-    legend.background    = element_rect(fill = "white", color = "grey80"),
-    legend.title         = element_text(face = "bold", size = 10),
-    legend.text          = element_text(size = 8),
-    plot.title           = element_text(hjust = 0.5, size = 16)
-  )
+  theme(legend.position = c(0.85, 0.85),
+        legend.background = element_rect(fill = "white", color = "grey80"),
+        legend.title = element_text(face = "bold", size = 10),
+        legend.text = element_text(size = 8),
+        plot.title = element_text(hjust = 0.5, size = 16))
 ```
 
 
@@ -495,43 +369,33 @@ burned_overlap <- st_intersection(fire_hist, fire_boundary)
 
 # Burned stats by YEAR_ + FIRE_NAME (still sf)
 burned_stats <- burned_overlap %>%
-  mutate(
-    min_RBR  = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
-    max_RBR  = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
-    mean_RBR = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
-    sd_RBR   = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE)
-  ) %>%
+  mutate(min_RBR = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
+         max_RBR = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
+         mean_RBR = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
+         sd_RBR = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE)) %>%
   group_by(YEAR_, FIRE_NAME) %>%
-  summarise(
-    min_RBR  = min(min_RBR,  na.rm = TRUE,progress = FALSE),
-    max_RBR  = max(max_RBR,  na.rm = TRUE,progress = FALSE),
-    mean_RBR = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
-    sd_RBR   = mean(sd_RBR,   na.rm = TRUE,progress = FALSE),
-    area_ha  = sum(as.numeric(st_area(.))) / 10000,
-    .groups  = "drop"
-  )
+  summarise(min_RBR = min(min_RBR,  na.rm = TRUE,progress = FALSE),
+            max_RBR = max(max_RBR,  na.rm = TRUE,progress = FALSE),
+            mean_RBR = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
+            sd_RBR = mean(sd_RBR,   na.rm = TRUE,progress = FALSE),
+            area_ha  = sum(as.numeric(st_area(.))) / 10000,
+            .groups  = "drop")
 
 #  Unburned remainder stats (also an sf)
-unburned_stats <- st_sf(
-    FIRE_NAME = "Unburned",
-    YEAR_     = 0,
-    geometry  = st_sfc(st_difference(st_union(fire_boundary), st_union(burned_overlap))),
+unburned_stats <- st_sf(FIRE_NAME = "Unburned", YEAR_ = 0,
+                        geometry  = st_sfc(st_difference(st_union(fire_boundary), st_union(burned_overlap))),
     crs       = st_crs(fire_boundary)
   ) %>%
-  mutate(
-    min_RBR  = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
-    max_RBR  = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
-    mean_RBR = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
-    sd_RBR   = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE)
-  ) %>%
-  summarise(
-    min_RBR  = min(min_RBR,  na.rm = TRUE,progress = FALSE),
-    max_RBR  = max(max_RBR,  na.rm = TRUE,progress = FALSE),
-    mean_RBR = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
-    sd_RBR   = mean(sd_RBR,   na.rm = TRUE,progress = FALSE),
-    area_ha  = sum(as.numeric(st_area(.))) / 10000,
-    .groups  = "drop"
-  )
+  mutate(min_RBR  = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
+         max_RBR  = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
+         mean_RBR = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
+         sd_RBR   = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE)) %>%
+  summarise(min_RBR  = min(min_RBR,  na.rm = TRUE,progress = FALSE),
+            max_RBR  = max(max_RBR,  na.rm = TRUE,progress = FALSE),
+            mean_RBR = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
+            sd_RBR   = mean(sd_RBR,   na.rm = TRUE,progress = FALSE),
+            area_ha  = sum(as.numeric(st_area(.))) / 10000,
+            .groups  = "drop")
 
 #  Combine
 full_fire_history <- bind_rows(burned_stats, unburned_stats)
@@ -539,10 +403,8 @@ full_fire_history <- bind_rows(burned_stats, unburned_stats)
 # Drop geometry and fix the NA‐row
 full_fire_history_table <- full_fire_history %>%
   st_set_geometry(NULL) %>%
-  mutate(
-    YEAR_     = if_else(is.na(YEAR_), 0L, YEAR_),
-    FIRE_NAME = if_else(is.na(FIRE_NAME), "Unburned", FIRE_NAME)
-  )
+  mutate(YEAR_  = if_else(is.na(YEAR_), 0L, YEAR_),
+         FIRE_NAME = if_else(is.na(FIRE_NAME), "Unburned", FIRE_NAME))
 
 # Display
 
@@ -564,24 +426,21 @@ veg_hist <- st_intersection(
 
 # compute per‐polygon RBR stats (still sf)
 veg_hist_stats <- veg_hist %>%
-  mutate(
-    min_RBR   = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
-    max_RBR   = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
-    mean_RBR  = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
-    sd_RBR    = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE),
-    area_ha   = as.numeric(st_area(.)) / 10000
-  )
+  mutate(min_RBR   = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
+         max_RBR   = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
+         mean_RBR  = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
+         sd_RBR    = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE),
+         area_ha   = as.numeric(st_area(.)) / 10000)
 
 # drop geometry & aggregate veg × fire
 veg_hist_summary <- veg_hist_stats %>%
   st_set_geometry(NULL) %>%
   group_by(MapUnit_Name, FIRE_NAME, YEAR_) %>%
-  summarise(
-    min_RBR   = min(min_RBR,   na.rm = TRUE,progress = FALSE),
-    max_RBR   = max(max_RBR,   na.rm = TRUE,progress = FALSE),
-    mean_RBR  = mean(mean_RBR,  na.rm = TRUE,progress = FALSE),
-    sd_RBR    = mean(sd_RBR,    na.rm = TRUE,progress = FALSE),
-    area_ha   = sum(area_ha,    na.rm = TRUE,progress = FALSE),
+  summarise(min_RBR = min(min_RBR, na.rm = TRUE,progress = FALSE),
+            max_RBR = max(max_RBR, na.rm = TRUE,progress = FALSE),
+            mean_RBR = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
+            sd_RBR = mean(sd_RBR, na.rm = TRUE,progress = FALSE),
+    area_ha = sum(area_ha, na.rm = TRUE,progress = FALSE),
     .groups   = "drop"
   )
 
@@ -592,35 +451,29 @@ veg_unburned  <- st_difference(clipped_veg, burned_union) %>%
 
 # compute stats on unburned (still sf)
 veg_unburned_stats <- veg_unburned %>%
-  mutate(
-    min_RBR   = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
-    max_RBR   = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
-    mean_RBR  = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
-    sd_RBR    = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE),
-    area_ha   = as.numeric(st_area(.)) / 10000
-  )
+  mutate(min_RBR = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
+         max_RBR = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
+         mean_RBR  = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
+         sd_RBR = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE),
+         area_ha = as.numeric(st_area(.)) / 10000)
 
 # drop geometry & summarise per veg
 veg_unburned_summary <- veg_unburned_stats %>%
   st_set_geometry(NULL) %>%
   group_by(MapUnit_Name) %>%
-  summarise(
-    FIRE_NAME = "Previously Unburned",
-    YEAR_     = 0L,
-    min_RBR   = min(min_RBR,   na.rm = TRUE,progress = FALSE),
-    max_RBR   = max(max_RBR,   na.rm = TRUE,progress = FALSE),
-    mean_RBR  = mean(mean_RBR,  na.rm = TRUE,progress = FALSE),
-    sd_RBR    = mean(sd_RBR,    na.rm = TRUE,progress = FALSE),
-    area_ha   = sum(area_ha,    na.rm = TRUE,progress = FALSE),
-    .groups   = "drop"
-  )
+  summarise(FIRE_NAME = "Previously Unburned", 
+            YEAR  = 0L,
+            min_RBR = min(min_RBR, na.rm = TRUE,progress = FALSE),
+            max_RBR = max(max_RBR,na.rm = TRUE,progress = FALSE),
+            mean_RBR = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
+            sd_RBR = mean(sd_RBR, na.rm = TRUE,progress = FALSE),
+            area_ha = sum(area_ha, na.rm = TRUE,progress = FALSE),
+            .groups = "drop")
 
 #  bind burned + unburned
 full_veg_history <- bind_rows(veg_hist_summary, veg_unburned_summary) %>%
-  mutate(
-    MapUnit_Name = factor(MapUnit_Name, levels = ordered_veg, ordered = TRUE),
-    FIRE_NAME = factor(FIRE_NAME, levels = c("WHISPERING PINES","COVINGTON","Previously Unburned"), ordered = TRUE)
-  ) %>%
+  mutate(MapUnit_Name = factor(MapUnit_Name, levels = ordered_veg, ordered = TRUE),
+         FIRE_NAME = factor(FIRE_NAME, levels = c("WHISPERING PINES","COVINGTON","Previously Unburned"), ordered = TRUE)) %>%
   arrange(MapUnit_Name, FIRE_NAME)
 
 #show
@@ -635,38 +488,31 @@ knitr::kable(
 ```{r rbr_by_veg_history, message=FALSE, warning=FALSE}
 
 # 1) burned pixels
-burned_vals <- exact_extract(
-  rbr_to_vec_crs,
-  veg_hist %>% dplyr::select(MapUnit_Name, FIRE_NAME),
-  include_cols = c("MapUnit_Name","FIRE_NAME"),
-  progress     = FALSE
-) %>% 
+burned_vals <- exact_extract(rbr_to_vec_crs,veg_hist %>% 
+                               dplyr::select(MapUnit_Name, FIRE_NAME),
+                             include_cols = c("MapUnit_Name","FIRE_NAME"),
+                             progress = FALSE) %>% 
   bind_rows() %>% 
   filter(!is.na(value))
 
 # 2) unburned pixels
-unburn_vals <- exact_extract(
-  rbr_to_vec_crs,
-  st_difference(clipped_veg, st_union(burned_overlap)) %>%
-    filter(!st_is_empty(.)) %>%
-    dplyr::select(MapUnit_Name),
-  include_cols = "MapUnit_Name",
-  progress     = FALSE
-) %>% 
+unburn_vals <- exact_extract(rbr_to_vec_crs,
+                             st_difference(clipped_veg, st_union(burned_overlap)) %>%
+                               filter(!st_is_empty(.)) %>%
+                               dplyr::select(MapUnit_Name),
+                             include_cols = "MapUnit_Name",
+                             progress = FALSE) %>% 
   bind_rows() %>%
   filter(!is.na(value)) %>%
   mutate(FIRE_NAME = "Previously Unburned")
 
 # 3) combine & factor
 all_vals <- bind_rows(burned_vals, unburn_vals) %>%
-  mutate(
-    MapUnit_Name = factor(MapUnit_Name, levels = ordered_veg, ordered = TRUE),
-    FIRE_NAME = factor(
-      FIRE_NAME,
-      levels = c("WHISPERING PINES","COVINGTON","Previously Unburned"),
-      ordered = TRUE
-    )
-  )
+  mutate(MapUnit_Name = factor(MapUnit_Name, levels = ordered_veg, ordered = TRUE),
+         FIRE_NAME = factor(
+           FIRE_NAME,
+           levels = c("WHISPERING PINES","COVINGTON","Previously Unburned"),
+           ordered = TRUE))
 ```
 
 
@@ -675,74 +521,40 @@ all_vals <- bind_rows(burned_vals, unburn_vals) %>%
 ```{r ridgeline_fire_severity_clean_labels, message=FALSE, warning=FALSE}
 
 all_vals_ordered <- all_vals %>%
-  mutate(
-    MapUnit_Name = str_remove_all(MapUnit_Name, "Association"),
-    MapUnit_Name = str_squish(MapUnit_Name)
-  ) %>%
-  mutate(
-    MapUnit_Name = factor(
-      MapUnit_Name,
-      levels = str_remove_all(ordered_veg, "Association") %>% str_squish(),
-      ordered = TRUE
-    ),
-    FIRE_NAME = factor(
-      FIRE_NAME,
-      levels = c("WHISPERING PINES", "COVINGTON","Previously Unburned"),
-      ordered = TRUE
-    )
-  )
+  mutate(MapUnit_Name = str_remove_all(MapUnit_Name, "Association"),
+         MapUnit_Name = str_squish(MapUnit_Name)) %>%
+  mutate(MapUnit_Name = factor(MapUnit_Name,
+                               levels = str_remove_all(ordered_veg, "Association") %>% str_squish(),
+                               ordered = TRUE),
+         FIRE_NAME = factor(FIRE_NAME,
+                            levels = c("WHISPERING PINES", "COVINGTON","Previously Unburned"),
+                            ordered = TRUE))
   
 # build legend labels
-legend_labs <- c(
-  "WHISPERING PINES"    = sprintf("Whispering Pines (19 yrs)"),
-  "COVINGTON"           = sprintf("Covington (30 yrs)"),
-  "Previously Unburned" = "Unburned (>55 yrs)"
-)
+legend_labs <- c("WHISPERING PINES" = sprintf("Whispering Pines (19 yrs)"),
+                 "COVINGTON" = sprintf("Covington (30 yrs)"),
+                 "Previously Unburned" = "Unburned (>55 yrs)")
 
-ggplot(all_vals_ordered,
-       aes(
-         x    = value,
-         y    = MapUnit_Name,      # <-- make sure y is here
-         fill = FIRE_NAME
-       )) +
-  geom_density_ridges(
-    scale           = 1.0,
-    rel_min_height  = 0.01,
-    trim            = FALSE,
-    colour          = "grey30",
-    alpha           = 0.8,
-    size            = 0.2
-  ) +
+ggplot(all_vals_ordered, aes(x= value, y = MapUnit_Name, fill = FIRE_NAME)) +
+  geom_density_ridges(scale = 1.0, rel_min_height  = 0.01, trim = FALSE, 
+                      colour = "grey30", alpha = 0.8, size = 0.2) +
+  geom_jitter(aes(x = value, y = MapUnit_Name), height = 0.025, 
+             size = .5, stroke = 0, shape = 20) +
   coord_flip() +
-  scale_x_continuous(
-    name   = " Relative Burn Ratio (RBR)",
-    breaks = seq(-0.2, 0.6, by = 0.2),
-    limits = c(-0.25, 0.65)
-  ) +
-  scale_y_discrete(
-    name   = NULL,
-    labels = function(x) str_wrap(x, 25)
-  ) +
-  scale_fill_viridis_d(
-    name    = "Fire History",
-    option  = "magma",
-    begin   = 0.2,   # cut off extreme ends if you want
-    end     = 0.8,
-    labels  = legend_labs
-  ) +
-  labs(
-    title = "Fire Severity Distribution by Vegetation Type × Fire History"
-  ) +
+  scale_x_continuous(name = " Relative Burn Ratio (RBR)", 
+                     breaks = seq(-0.1, 0.6, by = 0.2), limits = c(-0.1, 0.55)) +
+  scale_y_discrete(name = NULL, labels = function(x) str_wrap(x, 25)) +
+  scale_fill_viridis_d(name = "Fire History", option  = "magma", begin = 0.2, 
+                       end = 0.8, labels = legend_labs) +
+  labs(title = "Fire Severity Distribution by Vegetation Type × Fire History") +
   theme_minimal(base_size = 12) +
-  theme(
-    axis.text.x        = element_text(angle = 45, hjust = 1),
-    axis.text.y        = element_text(size = 10),
-    panel.grid.major   = element_line(color = "grey80", linetype = "dashed"),
-    panel.grid.minor   = element_blank(),
-    plot.title         = element_text(face = "bold", hjust = 0.5),
-    legend.position    = "bottom",
-    legend.background  = element_rect(fill = "white", color = "grey80")
-  )
+  theme(axis.text.x  = element_text(angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 10),
+        panel.grid.major = element_line(color = "grey80", linetype = "dashed"),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.position = "bottom",
+        legend.background = element_rect(fill = "white", color = "grey80"))
 
 ```
 
