@@ -1,0 +1,16 @@
+<PAMDataset>
+  <Metadata>
+    <MDI key="long_name">stackstac-776f836130da90bd644d3d81ffd07722</MDI>
+    <MDI key="OVR_RESAMPLING_ALG">AVERAGE</MDI>
+  </Metadata>
+  <PAMRasterBand band="1">
+    <Description>stackstac-776f836130da90bd644d3d81ffd07722</Description>
+    <Metadata>
+      <MDI key="STATISTICS_MAXIMUM">0.50226432085037</MDI>
+      <MDI key="STATISTICS_MEAN">0.16074388437088</MDI>
+      <MDI key="STATISTICS_MINIMUM">-0.21986362338066</MDI>
+      <MDI key="STATISTICS_STDDEV">0.13777632389506</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">51.46</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>
