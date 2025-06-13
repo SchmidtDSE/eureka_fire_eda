@@ -13,13 +13,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Setup 
 ```{r libraries,  results='hide', message=FALSE, warning=FALSE}
 # Load required libraries
-library(tidyverse)       # data wrangling & plotting
-library(sf)              # vector geospatial
-library(raster)          # raster handling
-library(exactextractr)   # fast zonal stats
-library(leaflet)         # interactive maps
-library(htmlwidgets)     # saving interactive maps
-library(viridis)         # colour palettes
+library(tidyverse)        
+library(sf)            
+library(raster)          
+library(exactextractr)    
+library(leaflet)         
+library(htmlwidgets)     
+library(viridis)        
 library(readr)
 library(scales)
 library(ggridges)
@@ -104,17 +104,11 @@ rbr_to_vec_crs <- projectRaster(rbr_rast, crs = vec_crs, method = "bilinear")
 
 ```{r fire_perimeter, message=FALSE, warning=FALSE, class.source = 'fold-show'}
 
-# Polygonize all non‐zero, non‐NA cells from the reprojected raster
-polys <- rasterToPolygons(rbr_to_vec_crs, fun = function(x) !is.na(x) & x != 0, 
-                          dissolve = TRUE)
-
-# Convert to sf
-fire_polygons <- st_as_sf(polys)
-
-#  merge into a single boundary polygon
-fire_boundary <- st_union(fire_polygons) %>% 
-  st_sf(geometry = ., crs = st_crs(fire_polygons))
-
+# Polygonize all non‐zero, non‐NA cells from the reprojected raster, convert to sf und merge into a single boundary polygon
+fire_boundary <- rasterToPolygons(rbr_to_vec_crs, fun = function(x) !is.na(x) & x > 0, 
+                          dissolve = TRUE) %>%
+  st_as_sf() %>%
+  st_union() 
 ```
 
 
@@ -207,11 +201,11 @@ legend_labels_wrapped <- legend_labels %>%
 ggplot(clipped_joined) +
   geom_sf(aes(fill = factor(MapUnit_Name, levels = ordered_types)),
           color = "gray80", size = 0.2) +
+  geom_sf(data = burnt_polygons, fill = NA, color = "black", size = 0.5) +
   scale_fill_manual(values = set3_cols, labels = legend_labels_wrapped, 
                     name   = "Vegetation Type:\nArea (ha) & % of Total") +
   coord_sf(crs = st_crs(4326)) +   # keep geographic graticule if you like
-  labs(title   = "", caption = sprintf("Total Burned Area: %.1f ha", 
-                                       total_fire_ha)) +
+  labs(title   = "", caption = sprintf("Total Burned Area: %.1f ha", total_fire_ha)) +
   theme_minimal(base_size = 10) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -226,7 +220,7 @@ ggplot(clipped_joined) +
         legend.title = element_text(size = 10, face = "bold"),
         legend.key.height = unit(1, "cm"),     # ↑ match the guide keyheight
         legend.spacing.y = unit(1, "cm"), 
-        plot.caption = element_text(hjust  = 2.5, csize = 10, cface = "bold", margin = margin(b = 2)))
+        plot.caption = element_text(hjust  = 2.5, margin = margin(b = 2)))
 ```
 
 
@@ -541,12 +535,14 @@ legend_labs <- c("WHISPERING PINES" = sprintf("Whispering Pines (19 yrs)"),
                  "COVINGTON" = sprintf("Covington (30 yrs)"),
                  "Previously Unburned" = "Unburned (>55 yrs)")
 
-ggplot(all_vals_ordered, aes(x= value, y    = MapUnit_Name, fill = FIRE_NAME)) +
+ggplot(all_vals_ordered, aes(x= value, y = MapUnit_Name, fill = FIRE_NAME)) +
   geom_density_ridges(scale = 1.0, rel_min_height  = 0.01, trim = FALSE, 
                       colour = "grey30", alpha = 0.8, size = 0.2) +
+  geom_jitter(aes(x = value, y = MapUnit_Name), height = 0.025, 
+             size = .5, stroke = 0, shape = 20) +
   coord_flip() +
   scale_x_continuous(name = " Relative Burn Ratio (RBR)", 
-                     breaks = seq(-0.2, 0.6, by = 0.2), limits = c(-0.25, 0.65)) +
+                     breaks = seq(-0.1, 0.6, by = 0.2), limits = c(-0.1, 0.55)) +
   scale_y_discrete(name = NULL, labels = function(x) str_wrap(x, 25)) +
   scale_fill_viridis_d(name = "Fire History", option  = "magma", begin = 0.2, 
                        end = 0.8, labels = legend_labs) +
