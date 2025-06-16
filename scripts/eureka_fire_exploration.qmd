@@ -477,7 +477,7 @@ veg_unburned_summary <- veg_unburned_stats %>%
   st_set_geometry(NULL) %>%
   group_by(MapUnit_Name) %>%
   summarise(FIRE_NAME = "Previously Unburned", 
-            YEAR  = 0L,
+            YEAR_  = 0L,
             min_RBR = min(min_RBR, na.rm = TRUE,progress = FALSE),
             max_RBR = max(max_RBR,na.rm = TRUE,progress = FALSE),
             mean_RBR = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
