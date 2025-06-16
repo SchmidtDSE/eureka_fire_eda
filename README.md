@@ -6,48 +6,35 @@ This repository contains the input data and outputs for an initial assessment of
 
 ## 📂 Repository Structure
 
-The repository is organized as follows:
-
-
-/inputs/
-
-- jotrgeodata.gpkg *Vegetation polygons (layer: JOTR_VegPolys)*
-
-- refined_rbr.tif *Refined Relative Burn Ratio (RBR) raster*
-
-- HistFires_JOTR_MOJA/ *Historic fires shapefile and related files*
-
-- 2025-05-27_strip_8121430_composite_file_format.tif *Pre-burn PlanetScope image*
-
-- 2025-06-09_strip_8121430_composite_file_format.tif *Post-burn PlanetScope image*
-
-/outputs/ 
-
-- fire_perimeter/ *Extracted Eureka fire boundary (optional export)*
-
--  veg_burned_summary.csv *Vegetation type area inside fire boundary*
-
-- severity_veg_summary.csv *Fire severity stats by vegetation type*
-
-- severity_fire_history.csv *Severity stats by intersecting historic fires*
-
-- severity_veg_firehist.csv *Severity stats by veg type & fire history*
-
-/eureka_fire_exploration_files/
-
-- figure-html/ *Auto-generated figures used in HTML*
-
-- libs/ *Supporting JS/CSS for interactive widgets*
-
-
--  eureka_fire_exploration.html *Rendered HTML report (same content as RPubs version)*
-
--  eureka_fire_exploration.qmd *Main Quarto analysis notebook*
-
--  NDVI_planetscope.R *Additional script that calculates and plots pre-burn and post-burn NDVI from PlanetScope data*
-
+```plaintext
+📂 eureka_fire_eda
+├── inputs/
+│   ├── jotrgeodata.gpkg                                          Vegetation polygons (layer: JOTR_VegPolys)
+│   ├── refined_rbr.tif                                           Refined Relative Burn Ratio (RBR) raster
+│   ├── HistFires_JOTR_MOJA/                                      Historic fires shapefile and related files
+│   ├── 2025-05-27_strip_8121430_composite_file_format.tif        Pre-burn PlanetScope image
+│   ├── 2025-06-09_strip_8121430_composite_file_format.tif        Post-burn PlanetScope image
+│
+├── outputs/
+│   ├── fire_perimeter/                     Extracted Eureka fire boundary (optional export)
+│   ├── veg_burned_summary.csv              Vegetation type area inside fire boundary
+│   ├── severity_veg_summary.csv            Fire severity stats by vegetation type
+│   ├── severity_fire_history.csv           Severity stats by intersecting historic fires
+│   ├── severity_veg_firehist.csv           Severity stats by veg type & fire history
+│
+├── eureka_fire_exploration_files/
+│   ├── figure-html/                        Auto-generated figures used in HTML
+│   ├── libs/                               Supporting JS/CSS for interactive widgets
+│
+├── eureka_fire_exploration.qmd             Main Quarto analysis notebook
+├── eureka_fire_exploration.html            Rendered HTML report (same content as RPubs version)
+├── NDVI_planetscope.R                      Additional script for pre/post-burn NDVI from PlanetScope
+├── README.md                               Project description & instructions
+```
 
 ## 📑 About This Analysis
+
+### Fire severity analysis
 
 This initial assessment explores the Relativized Burn Ratio (RBR) for the Eureka Fire (Joshua Tree National Park, June 2025), including:
 
