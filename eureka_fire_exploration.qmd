@@ -1,8 +1,9 @@
 ---
 title: "Eureka Fire Exploration"
-output:
-  html_document:
-    code_folding: hide
+format:
+  html:
+    code-fold: false
+    
 date: "2025-06-11"
 ---
 
@@ -33,11 +34,11 @@ library(RColorBrewer)
 ```{r read_data, results='hide', message=FALSE, warning=FALSE, class.source = 'fold-show'}
 
 # Read vegetation (vector) 
-veg_data <- st_read(dsn = "../inputs/jotrgeodata.gpkg",layer = "JOTR_VegPolys", 
+veg_data <- st_read(dsn = "inputs/jotrgeodata.gpkg",layer = "JOTR_VegPolys", 
                     quiet = TRUE)
 
 # Read fire severity (raster)
-rbr_rast <- raster("../inputs/refined_rbr.tif")    
+rbr_rast <- raster("inputs/refined_rbr.tif")    
 ```
 
 ## Interactive map of fire location
@@ -106,6 +107,9 @@ fire_boundary <- rasterToPolygons(rbr_to_vec_crs, fun = function(x) !is.na(x) & 
   st_as_sf() %>%
   st_union() 
 
+# Write to file
+#st_write(fire_boundary, "outputs/fire_perimeter/severity_to_fire_perimeter.shp")
+
 #convert reprojected raster to dataframe
 rbr_to_vec_crs_df <- as.data.frame(rasterToPoints(rbr_to_vec_crs))
 colnames(rbr_to_vec_crs_df) <- c("x", "y", "RBR")
@@ -128,8 +132,6 @@ ggplot() +
         panel.background = element_blank(),
         legend.position = "right")
 
-# Write to file
-#st_write(fire_boundary, "../outputs/fire_perimeter/severity_to_fire_perimeter.shp")
 ```
 
 ## Clip vegetation data to fire boundary
@@ -166,7 +168,7 @@ veg_summary <- bind_rows(veg_summary,
   arrange(desc(pct_of_total))
 
 # write out
-#write_csv(veg_summary, "../outputs/veg_burned_summary.csv")
+#write_csv(veg_summary, "outputs/veg_burned_summary.csv")
 
 # show table
 knitr::kable(veg_summary)
@@ -277,12 +279,13 @@ ordered_veg <- c("Singleleaf Pinyon / Muller Oak Woodland Association",
 severity_summary <- severity_summary %>%
   slice(match(ordered_veg, MapUnit_Name))
 
+#Write
+#write_csv(severity_summary, "outputs/severity_veg_summary.csv")
+
 # View results
 knitr::kable(
   severity_summary)
 
-#Write
-# write_csv(severity_summary, "../outputs/severity_veg_summary.csv")
 ```
 
 # Plot fire severity by vegetation type
@@ -326,7 +329,7 @@ ggplot(vals_df, aes(x = MapUnit_Name, y = value, fill = MapUnit_Name)) +
 
 ```{r read_hist_fire_data, results = "hide", message=FALSE, warning=FALSE,class.source = 'fold-show'}
 # Read the historic‐fires shapefile
-fire_hist <- st_read("../inputs/HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp")
+fire_hist <- st_read("inputs/HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp")
 
 # Reproject into EPSG:26911 (NAD83 / UTM zone 11N)
 fire_hist <- st_transform(fire_hist, 26911)
@@ -421,12 +424,13 @@ full_fire_history_table <- full_fire_history %>%
   mutate(YEAR_  = if_else(is.na(YEAR_), 0L, YEAR_),
          FIRE_NAME = if_else(is.na(FIRE_NAME), "Unburned", FIRE_NAME))
 
+
+#Write
+# write_csv(full_fire_history_table, "outputs/severity_fire_history.csv")
+
 # Display
 knitr::kable(
   full_fire_history_table)
-
-#Write
-# write_csv(full_fire_history_table, "../outputs/severity_fire_history.csv")
 ```
 
 ## Summary statistics fire severity by vegetation type & fire history
@@ -491,13 +495,14 @@ full_veg_history <- bind_rows(veg_hist_summary, veg_unburned_summary) %>%
          FIRE_NAME = factor(FIRE_NAME, levels = c("WHISPERING PINES","COVINGTON","Previously Unburned"), ordered = TRUE)) %>%
   arrange(MapUnit_Name, FIRE_NAME)
 
+
+#Write
+#write_csv(full_veg_history, "outputs/severity_veg_firehist.csv")
+
 #show
 knitr::kable(
   full_veg_history)
 
-#Write
-#write_csv(full_veg_history, "../outputs/severity_veg_firehist.csv")
-  
 ```
 
 ## Extract RBR pixel values by vegetation type & fire history
