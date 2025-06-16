@@ -1,4 +1,4 @@
-setwd("~/Desktop/NPS/Fireseverity/validation_EurekaFire")
+setwd("~/.../validation_EurekaFire") #adapt path
 
 library(tidyverse)
 library(sf)
@@ -11,8 +11,8 @@ NDVI = function(raster) {
  return(ndvi_r)
 }
   
-raster_prefire = terra::rast('PlanetScope/2025-05-27_strip_8094341_composite_file_format.tif')
-raster_postfire = terra::rast('PlanetScope/2025-06-09_strip_8121430_composite_file_format.tif')
+raster_prefire = terra::rast('inputs/2025-05-27_strip_8094341_composite_file_format.tif')
+raster_postfire = terra::rast('inputs/2025-06-09_strip_8121430_composite_file_format.tif')
 
 NDVI_prefire = NDVI(raster_prefire)
 NDVI_postfire = NDVI(raster_postfire)
@@ -25,7 +25,8 @@ p_prefire = ggplot() + theme_bw() + ggtitle('NDVI Pre-Fire (May 27, 2025)') +
                           direction = -1, limits = c(0, 0.34)) +
   scale_x_continuous(expand = c(0,0)) +
   scale_y_continuous(expand = c(0,0)) +
-  theme(legend.position = 'bottom')
+  theme(legend.position = 'bottom',
+        axis.text.x = element_text(angle = 90))
 
 p_postfire = ggplot() + theme_bw() + ggtitle('NDVI Post-Fire (June 9, 2025)') +
   geom_spatraster(data = NDVI_postfire) +
@@ -33,7 +34,8 @@ p_postfire = ggplot() + theme_bw() + ggtitle('NDVI Post-Fire (June 9, 2025)') +
                           direction = -1, , limits = c(0, 0.34)) +
   scale_x_continuous(expand = c(0,0)) +
   scale_y_continuous(expand = c(0,0)) +
-  theme(legend.position = 'bottom')
+  theme(legend.position = 'bottom',
+        axis.text.x = element_text(angle = 90))
 
 (p_diff = ggplot() + theme_bw() + ggtitle(expression(Delta[n]~' = (NDVI' [post]~' - NDVI' [pre]~') / NDVI' [pre])) +
   geom_spatraster(data = NDndvi) +
@@ -41,8 +43,10 @@ p_postfire = ggplot() + theme_bw() + ggtitle('NDVI Post-Fire (June 9, 2025)') +
                           direction = -1) +
   scale_x_continuous(expand = c(0,0)) +
   scale_y_continuous(expand = c(0,0)) +
-  theme(legend.position = 'bottom'))
+  theme(legend.position = 'bottom',
+  axis.text.x = element_text(angle = 90)))
 
 
 plot = cowplot::plot_grid(p_prefire, p_postfire, p_diff, ncol = 3)
 plot
+ggsave('outputs/NDVI_EurekaFire.png')
