@@ -10,7 +10,8 @@ date: "2025-06-11"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Setup 
+## Setup
+
 ```{r libraries,  results='hide', message=FALSE, warning=FALSE}
 # Load required libraries
 library(tidyverse)        
@@ -32,13 +33,12 @@ library(RColorBrewer)
 ```{r read_data, results='hide', message=FALSE, warning=FALSE, class.source = 'fold-show'}
 
 # Read vegetation (vector) 
-veg_data <- st_read(dsn = "jotrgeodata.gpkg",layer = "JOTR_VegPolys", 
+veg_data <- st_read(dsn = "inputs/jotrgeodata.gpkg",layer = "JOTR_VegPolys", 
                     quiet = TRUE)
 
 # Read fire severity (raster)
-rbr_rast <- raster("refined_rbr.tif")    
+rbr_rast <- raster("inputs/refined_rbr.tif")    
 ```
-
 
 ## Interactive map of fire location
 
@@ -57,8 +57,6 @@ leaflet(options = leafletOptions(attributionControl = TRUE)) %>%
             title = "RBR value",
             labFormat = labelFormat(transform = function(x) sort(x, decreasing = TRUE)))
 ```
-
-
 
 ## Static RBR map with grid
 
@@ -85,7 +83,6 @@ ggplot(rbr_df, aes(x = x, y = y, fill = RBR)) +
 
 ```
 
-
 ## Reproject raster to match vegetation data and calculate area
 
 For the purpose of this analysis, we reprojected the fire severity raster into NAD83 / UTM zone 11N to match the vegetation map, which may introduce some imprecision of sentinel 2 cells
@@ -99,7 +96,6 @@ vec_crs <- st_crs(veg_data)$proj4string
 rbr_to_vec_crs <- projectRaster(rbr_rast, crs = vec_crs, method = "bilinear")
 ```
 
-
 ## Extract fire perimeter from raster
 
 ```{r fire_perimeter, message=FALSE, warning=FALSE, class.source = 'fold-show'}
@@ -109,8 +105,32 @@ fire_boundary <- rasterToPolygons(rbr_to_vec_crs, fun = function(x) !is.na(x) & 
                           dissolve = TRUE) %>%
   st_as_sf() %>%
   st_union() 
-```
 
+#convert reprojected raster to dataframe
+rbr_to_vec_crs_df <- as.data.frame(rasterToPoints(rbr_to_vec_crs))
+colnames(rbr_to_vec_crs_df) <- c("x", "y", "RBR")
+
+#plot fire severity with generated fire boundary 
+ggplot() +
+  geom_raster(data = rbr_to_vec_crs_df, aes(x = x, y = y, fill = RBR)) +
+  geom_sf(data = fire_boundary, fill = NA, color = "black", linewidth = 0.8) +
+  scale_fill_viridis_c(option = "plasma", direction = -1,  na.value  = "transparent",
+    name = "RBR value", limits  = c(-0.2, 0.5), breaks = seq(-0.2, 0.5, by = 0.1)) +
+  coord_sf() +
+  labs(title = "Burned Area Boundary (RBR > 0)", x = NULL, y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(fill = NA, color = "black", size = 0.5),
+        axis.ticks = element_line(color = "black"),
+        axis.text = element_text(color = "black"),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.background = element_blank(),
+        legend.position = "right")
+
+# Write to file
+#st_write(fire_boundary, "outputs/fire_perimeter/severity_to_fire_perimeter.shp")
+```
 
 ## Clip vegetation data to fire boundary
 
@@ -119,7 +139,6 @@ fire_boundary <- rasterToPolygons(rbr_to_vec_crs, fun = function(x) !is.na(x) & 
 # Clip vegetation to that boundary
 clipped_veg <- st_intersection(veg_data, fire_boundary)
 ```
-
 
 ## Summarize vegetation types within fire boundary
 
@@ -147,12 +166,11 @@ veg_summary <- bind_rows(veg_summary,
   arrange(desc(pct_of_total))
 
 # write out
-# write_csv(veg_summary, "veg_burned_summary.csv")
+#write_csv(veg_summary, "outputs/veg_burned_summary.csv")
 
 # show table
 knitr::kable(veg_summary)
 ```
-
 
 ## Map vegetation types and their area within fire boundary
 
@@ -201,7 +219,6 @@ legend_labels_wrapped <- legend_labels %>%
 ggplot(clipped_joined) +
   geom_sf(aes(fill = factor(MapUnit_Name, levels = ordered_types)),
           color = "gray80", size = 0.2) +
-  geom_sf(data = burnt_polygons, fill = NA, color = "black", size = 0.5) +
   scale_fill_manual(values = set3_cols, labels = legend_labels_wrapped, 
                     name   = "Vegetation Type:\nArea (ha) & % of Total") +
   coord_sf(crs = st_crs(4326)) +   # keep geographic graticule if you like
@@ -222,7 +239,6 @@ ggplot(clipped_joined) +
         legend.spacing.y = unit(1, "cm"), 
         plot.caption = element_text(hjust  = 2.5, margin = margin(b = 2)))
 ```
-
 
 ## Summary statistics of fire severity by vegetation type
 
@@ -264,8 +280,10 @@ severity_summary <- severity_summary %>%
 # View results
 knitr::kable(
   severity_summary)
-```
 
+#Write
+# write_csv(severity_summary, "outputs/severity_veg_summary.csv")
+```
 
 # Plot fire severity by vegetation type
 
@@ -304,18 +322,16 @@ ggplot(vals_df, aes(x = MapUnit_Name, y = value, fill = MapUnit_Name)) +
   
 ```
 
-
 ## Load Historical Fires
 
 ```{r read_hist_fire_data, results = "hide", message=FALSE, warning=FALSE,class.source = 'fold-show'}
 # Read the historic‐fires shapefile
-fire_hist <- st_read("HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp")
+fire_hist <- st_read("inputs/HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp")
 
 # Reproject into EPSG:26911 (NAD83 / UTM zone 11N)
 fire_hist <- st_transform(fire_hist, 26911)
 
 ```
-
 
 ## Map historical fires and Eureka fire boundary
 
@@ -358,7 +374,6 @@ ggplot() +
         legend.text = element_text(size = 8),
         plot.title = element_text(hjust = 0.5, size = 16))
 ```
-
 
 ## Summary statistics of fire severity by historical fire
 
@@ -407,14 +422,14 @@ full_fire_history_table <- full_fire_history %>%
          FIRE_NAME = if_else(is.na(FIRE_NAME), "Unburned", FIRE_NAME))
 
 # Display
-
 knitr::kable(
   full_fire_history_table)
 
+#Write
+# write_csv(full_fire_history_table, "outputs/severity_fire_history.csv")
 ```
 
-
-## Summarize statistics fire severity by vegetation type & fire history 
+## Summary statistics fire severity by vegetation type & fire history
 
 ```{r  fire_history_veg, message=FALSE, warning=FALSE}
 
@@ -480,8 +495,10 @@ full_veg_history <- bind_rows(veg_hist_summary, veg_unburned_summary) %>%
 knitr::kable(
   full_veg_history)
 
+#Write
+#write_csv(full_veg_history, "outputs/severity_veg_firehist.csv")
+  
 ```
-
 
 ## Extract RBR pixel values by vegetation type & fire history
 
@@ -515,8 +532,7 @@ all_vals <- bind_rows(burned_vals, unburn_vals) %>%
            ordered = TRUE))
 ```
 
-
-## Plot fire severity by vegetation type x fire history 
+## Plot fire severity by vegetation type x fire history
 
 ```{r ridgeline_fire_severity_clean_labels, message=FALSE, warning=FALSE}
 
@@ -533,7 +549,7 @@ all_vals_ordered <- all_vals %>%
 # build legend labels
 legend_labs <- c("WHISPERING PINES" = sprintf("Whispering Pines (19 yrs)"),
                  "COVINGTON" = sprintf("Covington (30 yrs)"),
-                 "Previously Unburned" = "Unburned (>55 yrs)")
+                 "Previously Unburned" = "Previously Unburned (>55 yrs)")
 
 ggplot(all_vals_ordered, aes(x= value, y = MapUnit_Name, fill = FIRE_NAME)) +
   geom_density_ridges(scale = 1.0, rel_min_height  = 0.01, trim = FALSE, 
@@ -557,4 +573,3 @@ ggplot(all_vals_ordered, aes(x= value, y = MapUnit_Name, fill = FIRE_NAME)) +
         legend.background = element_rect(fill = "white", color = "grey80"))
 
 ```
-
