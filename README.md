@@ -17,6 +17,10 @@ The repository is organized as follows:
 
 - HistFires_JOTR_MOJA/ *Historic fires shapefile and related files*
 
+- 2025-05-27_strip_8121430_composite_file_format.tif *Pre-burn PlanetScope image*
+
+- 2025-06-09_strip_8121430_composite_file_format.tif *Post-burn PlanetScope image*
+
 /outputs/ 
 
 - fire_perimeter/ *Extracted Eureka fire boundary (optional export)*
@@ -35,6 +39,8 @@ The repository is organized as follows:
 
 -  eureka_fire_exploration.html *Rendered HTML report (same content as RPubs version)*
 
+-  NDVI_planetscope.R *Additional script that calculates and plots pre-burn and post-burn NDVI from PlanetScope data*
+
 /eureka_fire_exploration_files/
 
 - figure-html/ *Auto-generated figures used in HTML*
@@ -50,3 +56,9 @@ This initial assessment explores the Relativized Burn Ratio (RBR) for the Eureka
 - Fire burn severity summarized by vegetation type
 - Fire burn severity by fire history (noting that much of the area also burned in 2006)
 - Fire burn severity jointly by vegetation type and fire history
+
+### PlanetScope analysis
+
+This auxillary analysis investigates pre- and post-burn NDVI baed on PlanetScope satellite images. The images used are four-band images (RGB-IR) that were harmonized (by Planet) using Sentinel-2
+
+Caveat: The main goal of this analysis was to investigate *spatial* differences in NDVI across the burn perimeter. Since the two images were taken my two different satellites, the *temporal* comparison across images would require further bencharking beyond the scope of this study. 
