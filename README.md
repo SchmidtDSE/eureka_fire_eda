@@ -1,0 +1,1 @@
+# Initial assessment of vegetation impacts after the Eureka fire
