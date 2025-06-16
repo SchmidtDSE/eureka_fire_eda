@@ -33,19 +33,19 @@ The repository is organized as follows:
 
 - severity_veg_firehist.csv *Severity stats by veg type & fire history*
 
-/scripts/ 
-
--  eureka_fire_exploration.qmd *Main Quarto analysis notebook*
-
--  eureka_fire_exploration.html *Rendered HTML report (same content as RPubs version)*
-
--  NDVI_planetscope.R *Additional script that calculates and plots pre-burn and post-burn NDVI from PlanetScope data*
-
 /eureka_fire_exploration_files/
 
 - figure-html/ *Auto-generated figures used in HTML*
 
 - libs/ *Supporting JS/CSS for interactive widgets*
+
+
+-  eureka_fire_exploration.html *Rendered HTML report (same content as RPubs version)*
+
+-  eureka_fire_exploration.qmd *Main Quarto analysis notebook*
+
+-  NDVI_planetscope.R *Additional script that calculates and plots pre-burn and post-burn NDVI from PlanetScope data*
+
 
 ## 📑 About This Analysis
 
