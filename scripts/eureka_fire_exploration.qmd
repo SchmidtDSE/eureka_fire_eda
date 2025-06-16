@@ -33,11 +33,11 @@ library(RColorBrewer)
 ```{r read_data, results='hide', message=FALSE, warning=FALSE, class.source = 'fold-show'}
 
 # Read vegetation (vector) 
-veg_data <- st_read(dsn = "inputs/jotrgeodata.gpkg",layer = "JOTR_VegPolys", 
+veg_data <- st_read(dsn = "../inputs/jotrgeodata.gpkg",layer = "JOTR_VegPolys", 
                     quiet = TRUE)
 
 # Read fire severity (raster)
-rbr_rast <- raster("inputs/refined_rbr.tif")    
+rbr_rast <- raster("../inputs/refined_rbr.tif")    
 ```
 
 ## Interactive map of fire location
@@ -129,7 +129,7 @@ ggplot() +
         legend.position = "right")
 
 # Write to file
-#st_write(fire_boundary, "outputs/fire_perimeter/severity_to_fire_perimeter.shp")
+#st_write(fire_boundary, "../outputs/fire_perimeter/severity_to_fire_perimeter.shp")
 ```
 
 ## Clip vegetation data to fire boundary
@@ -166,7 +166,7 @@ veg_summary <- bind_rows(veg_summary,
   arrange(desc(pct_of_total))
 
 # write out
-#write_csv(veg_summary, "outputs/veg_burned_summary.csv")
+#write_csv(veg_summary, "../outputs/veg_burned_summary.csv")
 
 # show table
 knitr::kable(veg_summary)
@@ -282,7 +282,7 @@ knitr::kable(
   severity_summary)
 
 #Write
-# write_csv(severity_summary, "outputs/severity_veg_summary.csv")
+# write_csv(severity_summary, "../outputs/severity_veg_summary.csv")
 ```
 
 # Plot fire severity by vegetation type
@@ -326,7 +326,7 @@ ggplot(vals_df, aes(x = MapUnit_Name, y = value, fill = MapUnit_Name)) +
 
 ```{r read_hist_fire_data, results = "hide", message=FALSE, warning=FALSE,class.source = 'fold-show'}
 # Read the historic‐fires shapefile
-fire_hist <- st_read("inputs/HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp")
+fire_hist <- st_read("../inputs/HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp")
 
 # Reproject into EPSG:26911 (NAD83 / UTM zone 11N)
 fire_hist <- st_transform(fire_hist, 26911)
@@ -426,7 +426,7 @@ knitr::kable(
   full_fire_history_table)
 
 #Write
-# write_csv(full_fire_history_table, "outputs/severity_fire_history.csv")
+# write_csv(full_fire_history_table, "../outputs/severity_fire_history.csv")
 ```
 
 ## Summary statistics fire severity by vegetation type & fire history
@@ -496,7 +496,7 @@ knitr::kable(
   full_veg_history)
 
 #Write
-#write_csv(full_veg_history, "outputs/severity_veg_firehist.csv")
+#write_csv(full_veg_history, "../outputs/severity_veg_firehist.csv")
   
 ```
 
