@@ -9,11 +9,11 @@ This repository contains the input data and outputs for an initial assessment of
 ```plaintext
 📂 eureka_fire_eda
 ├── inputs/
-│   ├── jotrgeodata.gpkg                                          Vegetation polygons (layer: JOTR_VegPolys)
-│   ├── refined_rbr.tif                                           Refined Relative Burn Ratio (RBR) raster
-│   ├── HistFires_JOTR_MOJA/                                      Historic fires shapefile and related files
-│   ├── 2025-05-27_strip_8121430_composite_file_format.tif        Pre-burn PlanetScope image
-│   ├── 2025-06-09_strip_8121430_composite_file_format.tif        Post-burn PlanetScope image
+│   ├── jotrgeodata.gpkg                                      Vegetation polygons (layer: JOTR_VegPolys)
+│   ├── refined_rbr.tif                                       Refined Relative Burn Ratio (RBR) raster
+│   ├── HistFires_JOTR_MOJA/                                  Historic fires shapefile and related files
+│   ├── 2025-05-27_strip_8121430_composite_file_format.tif    Pre-burn PlanetScope image
+│   ├── 2025-06-09_strip_8121430_composite_file_format.tif    Post-burn PlanetScope image
 │
 ├── outputs/
 │   ├── fire_perimeter/                     Extracted Eureka fire boundary (optional export)
