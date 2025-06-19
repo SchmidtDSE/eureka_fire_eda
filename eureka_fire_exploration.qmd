@@ -529,6 +529,45 @@ all_vals <- bind_rows(burned_vals, unburn_vals) %>%
            ordered = TRUE))
 ```
 
+```{r assertion_4, message=FALSE, echo=FALSE}
+# Combine both burned and unburned pixel datasets 
+all_pixels <- bind_rows(
+  burned_vals %>% 
+    dplyr::select(MapUnit_Name, FIRE_NAME, value, coverage_fraction),
+  unburn_vals %>% 
+    dplyr::select(MapUnit_Name, FIRE_NAME, value, coverage_fraction)
+)
+
+# Look at coverage fraction distribution
+coverage_summary <- summary(all_pixels$coverage_fraction)
+# cat("Coverage fraction summary:\n")
+# print(coverage_summary)
+
+# Calculate total effective pixels based on coverage fractions
+total_effective_pixels <- sum(all_pixels$coverage_fraction)
+
+# Get the pixel count directly from the fire boundary for comparison
+# Convert fire_boundary to an sf object first
+fire_boundary_sf <- st_as_sf(st_sfc(fire_boundary, crs = st_crs(fire_boundary)))
+fire_boundary_pixels <- exact_extract(rbr_to_vec_crs, fire_boundary_sf)[[1]]
+total_boundary_pixels <- nrow(fire_boundary_pixels)
+
+# Calculate the sum of coverage fractions from the fire boundary extraction
+total_boundary_coverage <- sum(fire_boundary_pixels$coverage_fraction)
+
+# Report the key metrics
+# cat("\nPixel Count Analysis:\n")
+# cat("- Total pixels from direct fire boundary extraction:", total_boundary_pixels, "\n")
+# cat("- Sum of coverage fractions from fire boundary:", total_boundary_coverage, "\n")
+# cat("- Total effective pixels from veg × fire history extraction:", total_effective_pixels, "\n")
+# cat("- Difference in effective pixels:", 
+#     abs(total_effective_pixels - total_boundary_coverage), 
+#     "(", round(100 * abs(total_effective_pixels - total_boundary_coverage) / total_boundary_coverage, 2), "%)\n")
+
+# Check if the difference is within tolerance (adjusted from 5% to 1% for stricter validation)
+stopifnot(abs(total_effective_pixels - total_boundary_coverage) / total_boundary_coverage < 0.01)
+```
+
 ## Plot fire severity by vegetation type x fire history
 
 ```{r ridgeline_fire_severity_clean_labels, message=FALSE, warning=FALSE}
