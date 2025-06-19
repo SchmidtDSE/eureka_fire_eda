@@ -101,7 +101,7 @@ rbr_to_vec_crs <- projectRaster(rbr_rast, crs = vec_crs, method = "bilinear")
 
 ```{r fire_perimeter, message=FALSE, warning=FALSE, class.source = 'fold-show'}
 
-# Polygonize all non‐zero, non‐NA cells from the reprojected raster, convert to sf und merge into a single boundary polygon
+# Polygonize all positive, non‐NA cells from the reprojected raster, convert to sf und merge into a single boundary polygon
 fire_boundary <- rasterToPolygons(rbr_to_vec_crs, fun = function(x) !is.na(x) & x > 0, 
                           dissolve = TRUE) %>%
   st_as_sf() %>%
@@ -134,37 +134,21 @@ ggplot() +
 
 ```
 
-## Clip vegetation data to fire boundary
-
-```{r veg_clip, message=FALSE, warning=FALSE, class.source = 'fold-show'}
-
-# Clip vegetation to that boundary
-clipped_veg <- st_intersection(veg_data, fire_boundary)
-```
-
-## Summarize vegetation types within fire boundary
+## Clip vegetation data to fire boundary and ummarize vegetation types within fire boundary
 
 ```{r veg_summary, message=FALSE, warning=FALSE}
 # Calculate area per vegetation type polygon
-clipped_veg <- clipped_veg %>%
+clipped_veg <- st_intersection(veg_data, fire_boundary) %>%
   mutate(area_ha = as.numeric(st_area(.) / 10000))  # m² → ha
 
 # Summarize hectares by vegetation type
 veg_summary <- clipped_veg %>%
   st_set_geometry(NULL) %>%          # drop geometry for speed
   group_by(MapUnit_Name) %>%
-  summarise(veg_ha = sum(area_ha, na.rm = TRUE), .groups = "drop")
-
-#Calculate percent of total
-total_ha <- sum(veg_summary$veg_ha)
-
-veg_summary <- veg_summary %>%
-  mutate(pct_of_total = 100 * veg_ha / total_ha)
-
-# Add “Total Burned Area” row
-veg_summary <- bind_rows(veg_summary,
-                         tibble(MapUnit_Name = "Total Burned Area", 
-                                veg_ha = total_ha, pct_of_total = 100)) %>%
+  summarise(veg_ha = sum(area_ha, na.rm = TRUE), .groups = "drop") %>%
+  mutate(pct_of_total = 100 * veg_ha / sum(veg_ha)) %>%# total area can be calculated in pipe
+  bind_rows(tibble(MapUnit_Name = "Total Burned Area", 
+                   veg_ha = sum(clipped_veg$area_ha), pct_of_total = 100)) %>%
   arrange(desc(pct_of_total))
 
 # write out
@@ -293,9 +277,7 @@ vals_list <- extract(rbr_to_vec_crs, merged_units_veg)
 # Build long tibble
 vals_df <- tibble(MapUnit_Name = merged_units_veg$MapUnit_Name, value = vals_list) %>%
   unnest(cols = c(value)) %>%
-  filter(!is.na(value))
-
-vals_df <- vals_df %>%
+  filter(!is.na(value)) %>%
   mutate(MapUnit_Name = factor(MapUnit_Name, levels = ordered_veg))
 
 # Prepare colors & wrapped labels
