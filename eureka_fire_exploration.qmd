@@ -329,10 +329,8 @@ ggplot(vals_df, aes(x = MapUnit_Name, y = value, fill = MapUnit_Name)) +
 
 ```{r read_hist_fire_data, results = "hide", message=FALSE, warning=FALSE,class.source = 'fold-show'}
 # Read the historic‐fires shapefile
-fire_hist <- st_read("inputs/HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp")
-
-# Reproject into EPSG:26911 (NAD83 / UTM zone 11N)
-fire_hist <- st_transform(fire_hist, 26911)
+fire_hist <- st_read("inputs/HistFires_JOTR_MOJA/FindExistingLocationsOutput.shp") %>% # Reproject into EPSG:26911 (NAD83 / UTM zone 11N)
+  st_transform(26911)
 
 ```
 
@@ -390,30 +388,21 @@ burned_stats <- burned_overlap %>%
   mutate(min_RBR = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
          max_RBR = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
          mean_RBR = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
-         sd_RBR = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE)) %>%
-  group_by(YEAR_, FIRE_NAME) %>%
-  summarise(min_RBR = min(min_RBR,  na.rm = TRUE,progress = FALSE),
-            max_RBR = max(max_RBR,  na.rm = TRUE,progress = FALSE),
-            mean_RBR = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
-            sd_RBR = mean(sd_RBR,   na.rm = TRUE,progress = FALSE),
-            area_ha  = sum(as.numeric(st_area(.))) / 10000,
-            .groups  = "drop")
+         sd_RBR = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE),
+         area_ha = st_area(geometry)/10000) %>%
+  dplyr::select(FIRE_NAME, YEAR_, min_RBR, max_RBR, mean_RBR, sd_RBR, area_ha)
+
 
 #  Unburned remainder stats (also an sf)
 unburned_stats <- st_sf(FIRE_NAME = "Unburned", YEAR_ = 0,
                         geometry  = st_sfc(st_difference(st_union(fire_boundary), st_union(burned_overlap))),
-    crs       = st_crs(fire_boundary)
-  ) %>%
-  mutate(min_RBR  = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
-         max_RBR  = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
+    crs       = st_crs(fire_boundary)) %>%
+  mutate(min_RBR = exact_extract(rbr_to_vec_crs, ., "min",progress = FALSE),
+         max_RBR = exact_extract(rbr_to_vec_crs, ., "max",progress = FALSE),
          mean_RBR = exact_extract(rbr_to_vec_crs, ., "mean",progress = FALSE),
-         sd_RBR   = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE)) %>%
-  summarise(min_RBR  = min(min_RBR,  na.rm = TRUE,progress = FALSE),
-            max_RBR  = max(max_RBR,  na.rm = TRUE,progress = FALSE),
-            mean_RBR = mean(mean_RBR, na.rm = TRUE,progress = FALSE),
-            sd_RBR   = mean(sd_RBR,   na.rm = TRUE,progress = FALSE),
-            area_ha  = sum(as.numeric(st_area(.))) / 10000,
-            .groups  = "drop")
+         sd_RBR = exact_extract(rbr_to_vec_crs, ., "stdev",progress = FALSE),
+         area_ha = st_area(geometry)/10000) %>%
+  dplyr::select(FIRE_NAME, YEAR_, min_RBR, max_RBR, mean_RBR, sd_RBR, area_ha)
 
 #  Combine
 full_fire_history <- bind_rows(burned_stats, unburned_stats)
