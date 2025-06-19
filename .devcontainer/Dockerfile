@@ -3,6 +3,7 @@ FROM ghcr.io/rocker-org/geospatial:4.4.3 AS base
 
 # Install renv
 RUN R -e "install.packages('renv')"
+RUN R -e "install.packages('languageserver')"
 
 # Copy renv files
 COPY renv.lock renv.lock
