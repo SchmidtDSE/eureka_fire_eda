@@ -6,6 +6,28 @@ Analyses are documented in the Quarto notebook (`eureka_fire_exploration.qmd`) a
 
 ---
 
+## Development Setup
+
+#### `renv`
+
+This analysis uses `renv` for package management using R version `4.4.3`. This can be installed using `renv::refresh()` when inside of the working directory in RStudio. 
+
+#### VSCode Dev Container
+
+Alternatively, one can open run analysis in `VSCode` using:
+
+- `VSCode`
+- the `Dev Containers` extension within `VSCode`
+- `Docker` (Docker Desktop or a preferred alternative)
+
+Then, within the repository in `VSCode`, run:
+
+- `Cmd + Shift + P -> Dev Containers: Reopen in Container`
+
+When inside the container, to knit / render the `Quarto` document, run:
+
+- `Cmd + Shift + P -> Quarto: Render Document`, with the `eureka_fire_exploration.qmd` file open.
+
 ## 📂 Repository Structure
 
 ```plaintext
