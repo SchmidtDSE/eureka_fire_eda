@@ -4,7 +4,7 @@
 
 This repository contains the input data and outputs for an initial assessment of vegetation impacts after the [Eureka Fire](https://www.fire.ca.gov/incidents/2025/5/30/eureka-fire). These analyses were performed with the intent to support the post-fire reporting requirements of the National Park Service (NPS) within the Joshua Tree National Park (JOTR) Park Unit, with an emphasis on timeliness and accuracy. 
 
-Analyses are documented in the Quarto notebook (`eureka_fire_exploration.qmd`) and the rendered HTML report, published [here on RPubs](https://rpubs.com/mzomer/1322857). This exploratory analysis also helps characterize burn severity, vegetation types within the burned area, and varying fire history across the fire perimeter to support validation of the [Fire Severity Tool](https://storage.googleapis.com/fire-recovery-web/prod/fireSeverity.html) from the [Schmidt Center for Data Science and Environment (DSE)](https://dse.berkeley.edu/), which aims to provide a timely and accurate assessment of fire severity in response to fires such as the Eureka Fire.
+Analyses are documented in the Quarto notebook (`eureka_fire_exploration.qmd`) and the rendered HTML report, published [here on GitHub Pages](https://schmidtdse.github.io/eureka_fire_eda/). This exploratory analysis also helps characterize burn severity, vegetation types within the burned area, and varying fire history across the fire perimeter to support validation of the [Fire Severity Tool](https://storage.googleapis.com/fire-recovery-web/prod/fireSeverity.html) from the [Schmidt Center for Data Science and Environment (DSE)](https://dse.berkeley.edu/), which aims to provide a timely and accurate assessment of fire severity in response to fires such as the Eureka Fire.
 
 ---
 
