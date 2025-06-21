@@ -8,13 +8,18 @@ date: "2025-06-11"
 ---
 
 ```{r setup, include=FALSE, results='hide', message=FALSE, warning=FALSE}
+library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Setup
 
-```{r libraries,  results='hide', message=FALSE, warning=FALSE}
+```{r renv,  results='hide', message=FALSE, warning=FALSE}
+# renv::restore(confirm=FALSE)
+```
 # Load required libraries
+
+```{r libraries,  results='hide', message=FALSE, warning=FALSE}
 library(tidyverse)        
 library(sf)            
 library(raster)          
@@ -26,7 +31,6 @@ library(readr)
 library(scales)
 library(ggridges)
 library(RColorBrewer)
-
 ```
 
 ## Read data
@@ -156,6 +160,19 @@ veg_summary <- clipped_veg %>%
 
 # show table
 knitr::kable(veg_summary)
+```
+
+```{r assertion_1, message=FALSE, echo=FALSE}
+# After creating fire_boundary
+fire_boundary_area <- st_area(fire_boundary) %>% units::set_units("ha")
+# cat("Total fire boundary area (ha):", fire_boundary_area, "\n")
+
+# After clipping vegetation
+total_veg_area <- sum(clipped_veg$area_ha)
+# cat("Sum of vegetation areas within fire (ha):", total_veg_area, "\n")
+
+# Assert that these are approximately equal (within small tolerance for computational differences)
+stopifnot(abs(as.numeric(fire_boundary_area) - total_veg_area) < 0.1)
 ```
 
 ## Map vegetation types and their area within fire boundary
@@ -404,6 +421,21 @@ knitr::kable(
   full_fire_history_table)
 ```
 
+
+```{r assertion_2, message=FALSE, echo=FALSE}
+burned_area_sum <- sum(as.numeric(st_area(burned_overlap))) / 10000
+unburned_area <- as.numeric(st_area(unburned_stats)) / 10000
+total_calculated_area <- burned_area_sum + unburned_area
+
+# cat("Sum of historical burned areas (ha):", burned_area_sum, "\n")
+# cat("Unburned area (ha):", unburned_area, "\n")
+# cat("Total calculated area (ha):", total_calculated_area, "\n")
+# cat("Total fire boundary area (ha):", as.numeric(fire_boundary_area), "\n")
+
+# Check these are approximately equal
+stopifnot(abs(total_calculated_area - as.numeric(fire_boundary_area)) < 0.1)
+```
+
 ## Summary statistics fire severity by vegetation type & fire history
 
 ```{r  fire_history_veg, message=FALSE, warning=FALSE}
@@ -454,6 +486,20 @@ knitr::kable(
 
 ```
 
+```{r assertion_3, message=FALSE, echo=FALSE}
+# After calculating veg_hist_stats and veg_unburned_stats
+veg_hist_area_sum <- sum(veg_hist_stats$area_ha)
+veg_unburned_area_sum <- sum(veg_unburned_stats$area_ha)
+total_veg_hist_area <- veg_hist_area_sum + veg_unburned_area_sum
+
+# cat("Vegetation × burned area (ha):", veg_hist_area_sum, "\n")
+# cat("Vegetation × unburned area (ha):", veg_unburned_area_sum, "\n")
+# cat("Total calculated area (ha):", total_veg_hist_area, "\n")
+# cat("Total fire boundary area (ha):", as.numeric(fire_boundary_area), "\n")
+
+stopifnot(abs(total_veg_hist_area - as.numeric(fire_boundary_area)) < 0.1)
+```
+
 ## Extract RBR pixel values by vegetation type & fire history
 
 ```{r rbr_by_veg_history, message=FALSE, warning=FALSE}
@@ -481,6 +527,45 @@ all_vals <- bind_rows(burned_vals, unburn_vals) %>%
            FIRE_NAME,
            levels = c("WHISPERING PINES","COVINGTON","Previously Unburned"),
            ordered = TRUE))
+```
+
+```{r assertion_4, message=FALSE, echo=FALSE}
+# Combine both burned and unburned pixel datasets 
+all_pixels <- bind_rows(
+  burned_vals %>% 
+    dplyr::select(MapUnit_Name, FIRE_NAME, value, coverage_fraction),
+  unburn_vals %>% 
+    dplyr::select(MapUnit_Name, FIRE_NAME, value, coverage_fraction)
+)
+
+# Look at coverage fraction distribution
+coverage_summary <- summary(all_pixels$coverage_fraction)
+# cat("Coverage fraction summary:\n")
+# print(coverage_summary)
+
+# Calculate total effective pixels based on coverage fractions
+total_effective_pixels <- sum(all_pixels$coverage_fraction)
+
+# Get the pixel count directly from the fire boundary for comparison
+# Convert fire_boundary to an sf object first
+fire_boundary_sf <- st_as_sf(st_sfc(fire_boundary, crs = st_crs(fire_boundary)))
+fire_boundary_pixels <- exact_extract(rbr_to_vec_crs, fire_boundary_sf)[[1]]
+total_boundary_pixels <- nrow(fire_boundary_pixels)
+
+# Calculate the sum of coverage fractions from the fire boundary extraction
+total_boundary_coverage <- sum(fire_boundary_pixels$coverage_fraction)
+
+# Report the key metrics
+# cat("\nPixel Count Analysis:\n")
+# cat("- Total pixels from direct fire boundary extraction:", total_boundary_pixels, "\n")
+# cat("- Sum of coverage fractions from fire boundary:", total_boundary_coverage, "\n")
+# cat("- Total effective pixels from veg × fire history extraction:", total_effective_pixels, "\n")
+# cat("- Difference in effective pixels:", 
+#     abs(total_effective_pixels - total_boundary_coverage), 
+#     "(", round(100 * abs(total_effective_pixels - total_boundary_coverage) / total_boundary_coverage, 2), "%)\n")
+
+# Check if the difference is within tolerance (adjusted from 5% to 1% for stricter validation)
+stopifnot(abs(total_effective_pixels - total_boundary_coverage) / total_boundary_coverage < 0.01)
 ```
 
 ## Plot fire severity by vegetation type x fire history
